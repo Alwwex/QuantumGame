@@ -1,0 +1,20 @@
+{
+  "name": "kvantova-hra-live",
+  "version": "1.0.0",
+  "description": "Kvantová hra s fotony – společný realtime sandbox pro přednášky (remake Quantum Game 2)",
+  "type": "module",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "node --watch server/server.js",
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "qrcode": "^1.5.4",
+    "ws": "^8.22.0"
+  }
+}

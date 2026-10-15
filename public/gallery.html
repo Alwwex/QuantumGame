@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#2e006a" />
+    <title>Galerie · Kvantová hra LIVE</title>
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/present.css" />
+  </head>
+  <body class="gallery-page">
+    <svg id="svg-defs" class="svg-defs" width="0" height="0" aria-hidden="true"></svg>
+    <header class="topbar">
+      <a class="brand" href="/"><span class="logo">⚛</span><span class="brand-text">Kvantová hra <b>LIVE</b></span></a>
+      <div class="spacer"></div>
+      <a class="btn small" href="/">← Zpět do laboratoře</a>
+    </header>
+    <main style="padding: 16px 20px">
+      <h1 style="margin: 4px 0">🖼 Galerie výtvorů</h1>
+      <p class="muted">Sestavy, které lidé uložili během přednášky. Klikni na „Otevřít“ a dostaneš vlastní kopii, se kterou si můžeš dál hrát.</p>
+      <div id="gallery" class="p-rooms"></div>
+    </main>
+    <script type="module">
+      import { simulate } from '/js/qt.js'
+      import { encodeBoard } from '/js/room-core.js'
+      import { SVG_DEFS } from '/js/elements.js'
+      import { BoardView } from '/js/board.js'
+      import { h, timeAgo } from '/js/dom.js'
+
+      document.getElementById('svg-defs').innerHTML = `<defs>${SVG_DEFS}</defs>`
+      const host = document.getElementById('gallery')
+      try {
+        const { items } = await (await fetch('/api/gallery')).json()
+        if (!items.length) host.append(h('p', { class: 'muted' }, 'Zatím tu nic není. Ulož první sestavu přes „Sdílet → Uložit do galerie“.'))
+        for (const it of items) {
+          const boardHost = h('div', { class: 'thumb-board' })
+          host.append(
+            h(
+              'div',
+              { class: 'thumb gallery-item' },
+              boardHost,
+              h('div', { class: 'thumb-name' }, it.title),
+              h('div', { class: 'thumb-meta' }, h('b', { style: { color: it.color } }, it.author), ` · ${timeAgo(it.createdAt)}`),
+              it.note ? h('div', { class: 'thumb-note' }, it.note) : null,
+              h('div', { class: 'thumb-actions' }, h('a', { class: 'btn tiny primary', href: `/#b=${encodeBoard(it.content)}` }, 'Otevřít a hrát ▸')),
+            ),
+          )
+          const b = new BoardView(boardHost, { mini: true })
+          b.setContent(it.content)
+          b.setSimulation(simulate(it.content))
+        }
+      } catch {
+        host.append(h('p', { class: 'muted' }, 'Galerii se nepodařilo načíst.'))
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#2e006a" />
+    <title>Projektor · Kvantová hra LIVE</title>
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/present.css" />
+  </head>
+  <body class="present">
+    <svg id="svg-defs" class="svg-defs" width="0" height="0" aria-hidden="true"></svg>
+
+    <header class="p-top">
+      <div class="p-brand"><span class="logo">⚛</span> Kvantová hra <b>LIVE</b></div>
+      <nav class="p-tabs" role="tablist">
+        <button class="p-tab active" data-view="live">🔴 Živě</button>
+        <button class="p-tab" data-view="rooms">🗂 Stoly</button>
+        <button class="p-tab" data-view="showcase">✨ Prvky</button>
+        <button class="p-tab" data-view="gallery">🖼 Galerie</button>
+        <button class="p-tab" data-view="admin" id="admin-tab">🎛 Řízení</button>
+      </nav>
+      <div class="p-online"><span class="pulse"></span><b id="p-online">0</b> online</div>
+      <button id="fs-btn" class="btn small" title="Celá obrazovka (F)">⛶</button>
+    </header>
+
+    <main class="p-main">
+      <!-- ŽIVĚ -->
+      <section id="view-live" class="p-view active">
+        <div class="p-stage">
+          <div class="p-stage-head">
+            <span class="p-room-name" id="p-room-name">…</span>
+            <span id="p-room-meta" class="p-room-meta"></span>
+            <div class="spacer"></div>
+            <div class="modes" role="group">
+              <button data-pmode="laser" class="mode active">🔴 Paprsek</button>
+              <button data-pmode="wave" class="mode">〰️ Vlna</button>
+              <button data-pmode="experiment" class="mode">🎲 Experiment</button>
+            </div>
+            <label class="p-auto"><input type="checkbox" id="auto-wave" checked /> auto-vlna</label>
+          </div>
+          <div id="p-level" class="level-bar hidden"></div>
+          <div id="p-board" class="p-board"></div>
+          <div id="p-results" class="p-results"></div>
+        </div>
+        <aside class="p-side">
+          <div class="p-join">
+            <div class="p-join-title">Naskenuj a hraj s námi!</div>
+            <img id="p-qr" class="p-qr" alt="QR kód pro připojení" />
+            <div id="p-url" class="p-url"></div>
+            <div id="p-url-warn" class="p-warn hidden"></div>
+          </div>
+          <ol class="p-howto">
+            <li>Naskenuj QR kód 📱</li>
+            <li>Vyber prvek dole a klepni na desku</li>
+            <li>Klepnutím dílek otočíš</li>
+            <li>▶ pustí foton – sleduj kvantovou vlnu!</li>
+          </ol>
+          <div class="p-feed-wrap">
+            <div class="p-feed-title">⚡ Co se děje</div>
+            <ul id="p-feed" class="feed"></ul>
+          </div>
+        </aside>
+        <div id="p-emotes" class="p-emotes"></div>
+      </section>
+
+      <!-- STOLY -->
+      <section id="view-rooms" class="p-view">
+        <div class="p-rooms-head">
+          <h2>Všechny stoly <span id="p-room-count" class="muted"></span></h2>
+          <p class="muted">Klikni na stůl a ukaž ho na plátně.</p>
+        </div>
+        <div id="p-rooms" class="p-rooms"></div>
+      </section>
+
+      <!-- PRVKY -->
+      <section id="view-showcase" class="p-view">
+        <div class="sc-wrap">
+          <button class="sc-nav" id="sc-prev" aria-label="Předchozí">‹</button>
+          <div id="sc-card" class="sc-card"></div>
+          <button class="sc-nav" id="sc-next" aria-label="Další">›</button>
+        </div>
+        <div class="sc-bottom">
+          <div id="sc-dots" class="sc-dots"></div>
+          <label class="p-auto"><input type="checkbox" id="sc-auto" checked /> automaticky dál</label>
+        </div>
+      </section>
+
+      <!-- GALERIE -->
+      <section id="view-gallery" class="p-view">
+        <div class="p-rooms-head">
+          <h2>Galerie výtvorů</h2>
+          <p class="muted">Lidé sem ukládají své sestavy tlačítkem „Sdílet → Uložit do galerie“.</p>
+        </div>
+        <div id="p-gallery" class="p-rooms"></div>
+      </section>
+
+      <!-- ŘÍZENÍ -->
+      <section id="view-admin" class="p-view">
+        <div id="admin-body" class="admin"></div>
+      </section>
+    </main>
+
+    <script type="module" src="/js/present.js"></script>
+  </body>
+</html>

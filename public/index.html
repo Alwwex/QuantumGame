@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#2e006a" />
+    <meta name="description" content="Společná kvantová laboratoř: stavěj s ostatními optické experimenty s jednotlivými fotony v reálném čase." />
+    <title>Kvantová hra LIVE</title>
+    <link rel="icon" href="/img/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/style.css" />
+  </head>
+  <body class="app">
+    <svg id="svg-defs" class="svg-defs" width="0" height="0" aria-hidden="true"></svg>
+
+    <header class="topbar">
+      <a class="brand" href="/" title="Kvantová hra LIVE">
+        <span class="logo" aria-hidden="true">⚛</span>
+        <span class="brand-text">Kvantová hra <b>LIVE</b></span>
+      </a>
+      <button id="room-btn" class="room-chip" title="Místnosti">
+        <span class="room-dot"></span>
+        <span id="room-name">…</span>
+        <span id="room-lock"></span>
+        <span class="caret">▾</span>
+      </button>
+      <span id="conn" class="conn warn">Připojuji…</span>
+      <div class="spacer"></div>
+      <div id="avatars" class="avatars" title="Kdo je tu se mnou"></div>
+      <nav class="top-actions">
+        <button class="nav-btn" data-open="experiments" title="Slavné experimenty"><span>🌈</span><b>Experimenty</b></button>
+        <button class="nav-btn" data-open="levels" title="Levely z Quantum Game"><span>🏆</span><b>Výzvy</b></button>
+        <button class="nav-btn" data-open="encyclopedia" title="Co který prvek dělá"><span>📖</span><b>Prvky</b></button>
+        <button class="nav-btn" data-open="share" title="Sdílet a uložit"><span>🔗</span><b>Sdílet</b></button>
+      </nav>
+      <button id="me-btn" class="me-chip" title="Změnit jméno a barvu"></button>
+    </header>
+
+    <div id="announce" class="announce hidden" role="status"></div>
+
+    <main class="layout">
+      <aside class="toolbox-col">
+        <div class="col-title">🧰 Nástroje <span class="hint">táhni na desku nebo klepni</span></div>
+        <div id="toolbox" class="toolbox"></div>
+      </aside>
+
+      <section class="stage">
+        <div id="level-bar" class="level-bar hidden"></div>
+        <div id="board-host" class="board-host"></div>
+        <div class="controls">
+          <div class="playback" role="group" aria-label="Přehrávání">
+            <button id="rewind-btn" class="ctl" title="Zpět na paprsek (Home)">⏮</button>
+            <button id="back-btn" class="ctl" title="Krok zpět (←)">◀</button>
+            <button id="play-btn" class="ctl play" title="Pustit foton (mezerník)">▶</button>
+            <button id="fwd-btn" class="ctl" title="Krok vpřed (→)">▶|</button>
+            <button id="end-btn" class="ctl" title="Na konec (End)">⏭</button>
+            <span id="frame-info" class="frame-info">paprsek</span>
+          </div>
+          <div class="modes" role="group" aria-label="Režim zobrazení">
+            <button data-mode="laser" class="mode active" title="Klasický paprsek – kudy světlo teče (1)">🔴 Paprsek</button>
+            <button data-mode="wave" class="mode" title="Kvantová vlna jednoho fotonu krok po kroku (2)">〰️ Vlna</button>
+            <button data-mode="experiment" class="mode" title="Opakované výstřely jednotlivých fotonů (3)">🎲 Experiment</button>
+          </div>
+          <div class="board-actions">
+            <button id="undo-btn" class="ctl small" title="Vrátit poslední velkou změnu (vyčištění, načtení)" disabled>↶</button>
+            <button id="clear-btn" class="ctl small" title="Vyčistit desku / restartovat level">🧹</button>
+          </div>
+          <div id="emotes" class="emotes" aria-label="Reakce"></div>
+        </div>
+      </section>
+
+      <aside class="side">
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="state" role="tab">📊 Stav</button>
+          <button class="tab" data-tab="activity" role="tab">⚡ Aktivita <span id="feed-badge" class="badge"></span></button>
+          <button class="tab" data-tab="people" role="tab">👥 <span id="online-count">0</span></button>
+        </div>
+        <div id="panel-state" class="tab-panel active"><div id="state-body"></div></div>
+        <div id="panel-activity" class="tab-panel"><ul id="feed" class="feed"></ul></div>
+        <div id="panel-people" class="tab-panel">
+          <h3>V místnosti <span id="people-room"></span></h3>
+          <ul id="people-list" class="people"></ul>
+          <p class="note">Číslo v záložce = všichni připojení na serveru. Do jiné místnosti se přepneš nahoře přes název místnosti.</p>
+        </div>
+      </aside>
+    </main>
+
+    <div id="armed-bar" class="armed-bar"></div>
+    <div id="tooltip" class="tooltip" role="tooltip"></div>
+
+    <footer class="credits">
+      Remake hry <a href="https://quantumgame.io" target="_blank" rel="noopener">Quantum Game with Photons</a> (Piotr Migdał a kol., MIT) ·
+      fyzika 1:1 podle knihovny quantum-tensors · <a href="/galerie">galerie</a> · <a href="/present">projektor</a>
+    </footer>
+
+    <script type="module" src="/js/app.js"></script>
+  </body>
+</html>
