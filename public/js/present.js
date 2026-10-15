@@ -307,8 +307,8 @@ const conn = new Connection({
       case 'activity':
         describeActivity(msg)
         break
-      case 'cursor':
-        board.setCursor(msg.id, msg)
+      case 'cursors':
+        for (const c of msg.list) board.setCursor(c.id, c)
         break
       case 'emote':
         floatEmote(msg)
@@ -345,20 +345,22 @@ function renderRoomHead() {
 
 function describeActivity(msg) {
   const op = msg.op
+  const what = ACCUSATIVE[msg.e] || 'dílek'
   const verbs = {
-    place: () => `přidává ${ACCUSATIVE[op.e] || 'dílek'}`,
-    rotate: () => 'otáčí dílek',
-    move: () => 'posouvá dílek',
-    remove: () => 'odebírá dílek',
-    pol: () => 'mění polarizaci laseru',
-    clear: () => 'čistí desku 🧹',
-    template: () => 'načítá experiment',
-    level: () => 'spouští level',
-    undo: () => 'vrací změnu ↶',
-    load: () => 'nahrává sestavu',
+    place: `přidává ${what}`,
+    rotate: `otáčí ${what}`,
+    move: `posouvá ${what}`,
+    remove: `odebírá ${what}`,
+    pol: 'mění polarizaci laseru',
+    clear: 'čistí desku 🧹',
+    template: 'načítá experiment',
+    level: 'spouští level',
+    undo: 'vrací změnu ↶',
+    load: 'nahrává sestavu',
   }
-  const text = (verbs[msg.kind] || (() => 'mění desku'))()
-  addFeed({ icon: op.e ? iconSvg(op.e, 0, 22) : '⚡', who: msg.by, text, room: msg.room === state.roomId ? null : msg.roomName })
+  const text = verbs[msg.kind] || 'mění desku'
+  const icon = msg.e ? iconSvg(msg.e, op.r || 0, 22) : '⚡'
+  addFeed({ icon, who: msg.by, text, room: msg.room === state.roomId ? null : msg.roomName })
 }
 
 function addFeed(item) {

@@ -24,12 +24,13 @@ import { getTemplate } from '../public/js/templates.js'
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const PUBLIC_DIR = path.join(ROOT, 'public')
-const PORT = Number(process.env.PORT) || 3000
+const PORT = process.env.PORT !== undefined && process.env.PORT !== '' ? Number(process.env.PORT) : 3000
 const HOST = process.env.HOST || '0.0.0.0'
 const DATA_DIR = process.env.DATA_DIR || path.join(ROOT, 'data')
 const PUBLIC_URL = (process.env.PUBLIC_URL || '').replace(/\/$/, '')
 const ADMIN_KEY = process.env.ADMIN_KEY || crypto.randomBytes(3).toString('hex')
 const BOOT_EPOCH = crypto.randomBytes(6).toString('hex')
+let actualPort = PORT
 
 const MAX_ROOMS = 300
 const MAX_GALLERY = 400
@@ -168,8 +169,8 @@ async function writeAtomic(file, data) {
   await fsp.rename(tmp, file)
 }
 
-async function saveNow() {
-  const data = {
+function serializeState() {
+  return JSON.stringify({
     savedAt: new Date().toISOString(),
     rooms: [...rooms.values()].map((r) => ({
       id: r.id,
@@ -181,19 +182,18 @@ async function saveNow() {
       updatedAt: r.updatedAt,
       history: r.history,
     })),
-  }
-  await writeAtomic(ROOMS_FILE, JSON.stringify(data))
+  })
+}
+
+async function saveNow() {
+  await writeAtomic(ROOMS_FILE, serializeState())
   await writeAtomic(GALLERY_FILE, JSON.stringify(gallery))
 }
 
 function saveSync() {
   try {
     fs.mkdirSync(DATA_DIR, { recursive: true })
-    const data = {
-      savedAt: new Date().toISOString(),
-      rooms: [...rooms.values()].map(({ clients: _c, restorable: _r, ...rest }) => rest),
-    }
-    fs.writeFileSync(ROOMS_FILE, JSON.stringify(data))
+    fs.writeFileSync(ROOMS_FILE, serializeState())
     fs.writeFileSync(GALLERY_FILE, JSON.stringify(gallery))
   } catch (e) {
     console.warn('Ukládání při ukončení selhalo:', e.message)
@@ -333,7 +333,7 @@ function joinRoom(client, roomId, known) {
     users: roomUsers(room),
     online: onlineCount(),
   })
-  broadcast(room, { type: 'users', users: roomUsers(room), online: onlineCount() }, client)
+  scheduleUsers(room)
   notifyWatchers()
 }
 
@@ -342,9 +342,40 @@ function leaveRoom(client) {
   if (!room) return
   room.clients.delete(client)
   client.room = null
-  broadcast(room, { type: 'cursor', id: client.id, hide: true })
-  broadcast(room, { type: 'users', users: roomUsers(room), online: onlineCount() })
+  queueCursor(room, { id: client.id, hide: true })
+  scheduleUsers(room)
   notifyWatchers()
+}
+
+// Seznam lidí v místnosti posíláme sloučeně – když se během minuty připojí celý sál,
+// nechceme každému poslat sto verzí seznamu.
+function scheduleUsers(room) {
+  if (room.usersTimer) return
+  room.usersTimer = setTimeout(() => {
+    room.usersTimer = null
+    broadcast(room, { type: 'users', users: roomUsers(room), online: onlineCount() })
+  }, 400)
+}
+
+// Kurzory posíláme v dávkách ~8× za sekundu; ve velkých místnostech jen ty nejaktivnější.
+const CURSOR_FLUSH_MS = 120
+const CURSOR_BATCH_MAX = 24
+function queueCursor(room, cursor) {
+  if (!room.cursorBatch) room.cursorBatch = new Map()
+  room.cursorBatch.delete(cursor.id)
+  room.cursorBatch.set(cursor.id, cursor)
+  if (room.cursorTimer) return
+  room.cursorTimer = setTimeout(() => {
+    room.cursorTimer = null
+    let list = [...room.cursorBatch.values()]
+    room.cursorBatch.clear()
+    if (list.length > CURSOR_BATCH_MAX) {
+      const important = list.filter((c) => c.hide || c.drag)
+      const rest = list.filter((c) => !c.hide && !c.drag).slice(-Math.max(0, CURSOR_BATCH_MAX - important.length))
+      list = [...important, ...rest]
+    }
+    if (list.length) broadcast(room, { type: 'cursors', list })
+  }, CURSOR_FLUSH_MS)
 }
 
 
@@ -375,6 +406,7 @@ function handleOp(client, msg) {
   }
 
   const before = op.t === 'load' && !op.undo ? cloneContent(room.content) : null
+  const touched = Number.isInteger(raw.x) && Number.isInteger(raw.y) ? room.content.cells[`${raw.x},${raw.y}`]?.t : null
   const result = applyOp(room.content, op)
   if (!result.ok) return reject(result.error)
   if (before) {
@@ -393,7 +425,16 @@ function handleOp(client, msg) {
     canUndo: room.history.length > 0,
   }
   broadcast(room, out)
-  toWatchers({ type: 'activity', room: room.id, roomName: room.name, op: raw.t === 'load' ? { t: 'load' } : result.op, kind: raw.t, by: publicUser(client), v: room.version })
+  toWatchers({
+    type: 'activity',
+    room: room.id,
+    roomName: room.name,
+    op: result.op.t === 'load' ? { t: 'load' } : result.op,
+    kind: raw.t,
+    e: result.op.e || touched || null,
+    by: publicUser(client),
+    v: room.version,
+  })
   notifyWatchers()
   scheduleSave()
 }
@@ -481,19 +522,19 @@ function handleMessage(client, data) {
       break
     case 'cursor': {
       if (!client.room || client.role === 'presenter') return
-      const t = now()
-      if (t - client.lastCursor < 40) return
-      client.lastCursor = t
       const x = Number(msg.x)
       const y = Number(msg.y)
-      const out = { type: 'cursor', id: client.id, name: client.name, color: client.color }
-      if (msg.hide || !Number.isFinite(x) || !Number.isFinite(y)) out.hide = true
+      const hide = msg.hide || !Number.isFinite(x) || !Number.isFinite(y)
+      // poslední pozice vždy přepíše předchozí v dávce; jen záplavu zpráv zahazujeme
+      if (!hide && !takeToken(client.cursorBucket, 40, 25)) return
+      const out = { id: client.id, name: client.name, color: client.color }
+      if (hide) out.hide = true
       else {
         out.x = Math.round(x * 100) / 100
         out.y = Math.round(y * 100) / 100
         if (typeof msg.drag === 'string' && /^[A-Za-z]{1,30}$/.test(msg.drag)) out.drag = msg.drag
       }
-      broadcast(client.room, out, client)
+      queueCursor(client.room, out)
       break
     }
     case 'emote': {
@@ -514,7 +555,7 @@ function handleMessage(client, data) {
     case 'rename': {
       client.name = cleanText(msg.name, 24, client.name)
       if (COLORS.test(msg.color)) client.color = msg.color
-      if (client.room) broadcast(client.room, { type: 'users', users: roomUsers(client.room), online: onlineCount() })
+      if (client.room) scheduleUsers(client.room)
       break
     }
     case 'createRoom':
@@ -558,7 +599,7 @@ function lanUrls() {
   const urls = []
   for (const list of Object.values(os.networkInterfaces())) {
     for (const ni of list || []) {
-      if (ni.family === 'IPv4' && !ni.internal) urls.push(`http://${ni.address}:${PORT}`)
+      if (ni.family === 'IPv4' && !ni.internal) urls.push(`http://${ni.address}:${actualPort}`)
     }
   }
   return urls
@@ -694,7 +735,7 @@ wss.on('connection', (ws, req) => {
     isAdmin: false,
     opBucket: {},
     emoteBucket: {},
-    lastCursor: 0,
+    cursorBucket: {},
     alive: true,
   }
   clients.add(client)
@@ -725,7 +766,8 @@ setInterval(() => {
 }, 30000).unref()
 
 server.listen(PORT, HOST, () => {
-  const base = PUBLIC_URL || `http://localhost:${PORT}`
+  actualPort = server.address().port
+  const base = PUBLIC_URL || `http://localhost:${actualPort}`
   console.log('')
   console.log('  ⚛️  Kvantová hra LIVE běží!')
   console.log(`  Hráči:        ${base}/`)

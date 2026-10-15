@@ -330,7 +330,7 @@ a {
 
 .layout {
   display: grid;
-  grid-template-columns: 236px minmax(0, 1fr) 330px;
+  grid-template-columns: 250px minmax(0, 1fr) 330px;
   grid-template-areas: 'tools stage side';
   gap: 16px;
   padding: 14px;
@@ -891,7 +891,7 @@ a {
 .toolbox {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 .tb-group {
   background: var(--panel);
@@ -899,8 +899,15 @@ a {
   border-radius: var(--radius);
   padding: 8px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+.toolbox-col .tool-icon svg {
+  width: 40px;
+  height: 40px;
+}
+.toolbox-col .tool-name {
+  font-size: 9.5px;
 }
 .tb-title {
   grid-column: 1 / -1;

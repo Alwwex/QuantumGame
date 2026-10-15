@@ -1,0 +1,15 @@
+# Render Blueprint – jedním klikem nasadí server zdarma (https://render.com/deploy)
+services:
+  - type: web
+    name: kvantova-hra-live
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # klíč pro /present?key=… (najdeš ho v Render → Environment)
+      - key: ADMIN_KEY
+        generateValue: true

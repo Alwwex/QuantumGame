@@ -242,8 +242,8 @@ function handleMessage(msg) {
       renderPeople()
       break
     }
-    case 'cursor':
-      if (msg.id !== state.me.id) board.setCursor(msg.id, msg)
+    case 'cursors':
+      for (const c of msg.list) if (c.id !== state.me.id) board.setCursor(c.id, c)
       break
     case 'emote':
       board.emote(msg.emoji, msg.x, msg.y)
@@ -496,7 +496,28 @@ requestAnimationFrame(loop)
 // Vstup z desky
 // ---------------------------------------------------------------------------
 
+// kurzor posíláme max. ~14× za sekundu, ale poslední pozice se vždy odešle (trailing throttle)
 let lastCursorSent = 0
+let cursorTimer = null
+let pendingCursor = null
+function sendCursor(intent) {
+  pendingCursor = intent
+  const flush = () => {
+    cursorTimer = null
+    const c = pendingCursor
+    pendingCursor = null
+    if (!c) return
+    lastCursorSent = performance.now()
+    if (c.hide) conn.send({ type: 'cursor', hide: true })
+    else conn.send({ type: 'cursor', x: c.x, y: c.y, drag: c.drag || null })
+  }
+  const wait = 70 - (performance.now() - lastCursorSent)
+  if (intent.hide || intent.drag !== undefined || wait <= 0) {
+    clearTimeout(cursorTimer)
+    flush()
+  } else if (!cursorTimer) cursorTimer = setTimeout(flush, wait)
+}
+
 function onBoardIntent(intent) {
   const content = state.view
   if (!content) return
@@ -538,14 +559,9 @@ function onBoardIntent(intent) {
       state.hover = intent.inside ? { x: intent.x, y: intent.y } : null
       scheduleBoardTooltip(intent)
       break
-    case 'cursor': {
-      const t = performance.now()
-      if (intent.drag === undefined && t - lastCursorSent < 50) return
-      lastCursorSent = t
-      if (intent.hide) conn.send({ type: 'cursor', hide: true })
-      else conn.send({ type: 'cursor', x: intent.x, y: intent.y, drag: intent.drag || null })
+    case 'cursor':
+      sendCursor(intent)
       break
-    }
     default:
       break
   }
